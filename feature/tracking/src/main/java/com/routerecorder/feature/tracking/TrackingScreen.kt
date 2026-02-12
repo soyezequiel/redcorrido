@@ -1,13 +1,7 @@
 package com.routerecorder.feature.tracking
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,218 +12,202 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.routerecorder.core.common.util.FormatUtils
 import com.routerecorder.core.domain.model.ActivityType
-import com.routerecorder.core.domain.model.TrackingProfile
 import com.routerecorder.core.domain.model.TrackingState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingScreen(
     viewModel: TrackingViewModel,
-    onNavigateToHistory: () -> Unit
+    onNavigateToHistory: () -> Unit = {}
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Profile & Activity selector (only before tracking)
-        AnimatedVisibility(visible = state.showProfileSelector) {
-            Column {
-                Text(
-                    text = "Nuevo Recorrido",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+        // Activity Type Selector
+        Text(
+            text = "Tipo de actividad",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            ActivityType.values().forEachIndexed { index, type ->
+                SegmentedButton(
+                    selected = uiState.selectedActivity == type,
+                    onClick = { viewModel.selectActivity(type) },
+                    shape = SegmentedButtonDefaults.itemShape(
+                        index = index,
+                        count = ActivityType.values().size
+                    ),
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (type) {
+                                    ActivityType.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
+                                    ActivityType.BIKE -> Icons.AutoMirrored.Filled.DirectionsBike
+                                    ActivityType.CAR -> Icons.Default.DirectionsCar
+                                },
+                                contentDescription = type.name,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = when (type) {
+                                    ActivityType.WALK -> "Caminar"
+                                    ActivityType.BIKE -> "Bici"
+                                    ActivityType.CAR -> "Auto"
+                                },
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                    }
                 )
+            }
+        }
 
-                Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = state.routeName,
-                    onValueChange = { viewModel.updateRouteName(it) },
-                    label = { Text("Nombre del recorrido (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Activity type selector
+        // Metrics Panel
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
-                    text = "Tipo de actividad",
+                    text = "Métricas",
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    ActivityChip(
-                        icon = Icons.Default.DirectionsWalk,
-                        label = "Caminar",
-                        selected = state.selectedActivity == ActivityType.WALK,
-                        onClick = { viewModel.selectActivity(ActivityType.WALK) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActivityChip(
-                        icon = Icons.Default.DirectionsBike,
-                        label = "Bicicleta",
-                        selected = state.selectedActivity == ActivityType.BIKE,
-                        onClick = { viewModel.selectActivity(ActivityType.BIKE) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActivityChip(
-                        icon = Icons.Default.DirectionsCar,
-                        label = "Auto",
-                        selected = state.selectedActivity == ActivityType.CAR,
-                        onClick = { viewModel.selectActivity(ActivityType.CAR) },
-                        modifier = Modifier.weight(1f)
-                    )
+                    MetricItem("Distancia", FormatUtils.formatDistance(uiState.metrics.totalDistanceMeters))
+                    MetricItem("Duración", FormatUtils.formatDuration(uiState.metrics.elapsedTimeMs))
+                    MetricItem("Velocidad", FormatUtils.formatSpeed(uiState.metrics.currentSpeedMs))
                 }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Profile selector
-                Text(
-                    text = "Perfil de consumo",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ProfileSelector(
-                    selected = state.selectedProfile,
-                    onProfileSelected = { viewModel.selectProfile(it) }
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
 
-        // Map placeholder (to be replaced with Mapbox/OSMDroid)
-        Box(
+        // Map placeholder
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF1A1A2E)),
-            contentAlignment = Alignment.Center
+                .weight(1f),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            if (!state.isTracking) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    text = "El mapa se mostrará aquí\ncuando inicies un recorrido",
-                    color = Color.White.copy(alpha = 0.5f),
-                    textAlign = TextAlign.Center
+                    text = "🗺️ Mapa",
+                    style = MaterialTheme.typography.headlineMedium
                 )
-            } else {
-                // TODO: Integrate Mapbox/OSMDroid MapView with live polyline
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "📍 Grabando...",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${state.trackPoints.size} puntos",
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
+                Text(
+                    text = "${uiState.trackPoints.size} puntos registrados",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Metrics panel (visible during tracking)
-        AnimatedVisibility(visible = state.isTracking) {
-            MetricsPanel(state)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Action buttons
+        // Controls
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!state.isTracking) {
-                FloatingActionButton(
-                    onClick = { viewModel.startTracking() },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(72.dp)
-                ) {
-                    Icon(
-                        Icons.Default.PlayArrow,
-                        contentDescription = "Iniciar",
-                        modifier = Modifier.size(36.dp)
-                    )
+            when (uiState.trackingState) {
+                TrackingState.IDLE -> {
+                    FloatingActionButton(
+                        onClick = { viewModel.startTracking() },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(72.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Iniciar",
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
-            } else {
-                // Pause/Resume
-                FloatingActionButton(
-                    onClick = {
-                        when (state.trackingState) {
-                            TrackingState.TRACKING -> viewModel.pauseTracking()
-                            TrackingState.PAUSED, TrackingState.AUTO_PAUSED -> viewModel.resumeTracking()
-                            else -> {}
-                        }
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        if (state.trackingState == TrackingState.TRACKING)
-                            Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Pausar/Reanudar"
-                    )
+                TrackingState.TRACKING -> {
+                    FloatingActionButton(
+                        onClick = { viewModel.pauseTracking() },
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Icon(Icons.Default.Pause, contentDescription = "Pausar")
+                    }
+                    Spacer(modifier = Modifier.width(24.dp))
+                    FloatingActionButton(
+                        onClick = {
+                            viewModel.stopTracking()
+                            onNavigateToHistory()
+                        },
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) {
+                        Icon(Icons.Default.Stop, contentDescription = "Detener")
+                    }
                 }
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-                // Stop
-                FloatingActionButton(
-                    onClick = { viewModel.stopTracking() },
-                    containerColor = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(72.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Stop,
-                        contentDescription = "Detener",
-                        modifier = Modifier.size(36.dp)
-                    )
+                TrackingState.PAUSED, TrackingState.AUTO_PAUSED -> {
+                    FloatingActionButton(
+                        onClick = { viewModel.resumeTracking() },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Reanudar")
+                    }
+                    Spacer(modifier = Modifier.width(24.dp))
+                    FloatingActionButton(
+                        onClick = {
+                            viewModel.stopTracking()
+                            onNavigateToHistory()
+                        },
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) {
+                        Icon(Icons.Default.Stop, contentDescription = "Detener")
+                    }
                 }
             }
         }
@@ -239,141 +217,17 @@ fun TrackingScreen(
 }
 
 @Composable
-private fun ActivityChip(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val bgColor by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surface,
-        label = "chipBg"
-    )
-
-    Card(
-        modifier = modifier.clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = bgColor),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(28.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = label, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-private fun ProfileSelector(
-    selected: TrackingProfile,
-    onProfileSelected: (TrackingProfile) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        TrackingProfile.values().forEach { profile ->
-            val isSelected = profile == selected
-            val label = when (profile) {
-                TrackingProfile.HIGH_ACCURACY -> "Alta precisión"
-                TrackingProfile.BALANCED -> "Balanceado"
-                TrackingProfile.LOW_POWER -> "Bajo consumo"
-            }
-            val desc = when (profile) {
-                TrackingProfile.HIGH_ACCURACY -> "Caminar / Bici"
-                TrackingProfile.BALANCED -> "Uso general"
-                TrackingProfile.LOW_POWER -> "Viajes largos"
-            }
-
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable { onProfileSelected(profile) }
-                    .then(
-                        if (isSelected) Modifier.border(
-                            2.dp,
-                            MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(12.dp)
-                        ) else Modifier
-                    ),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected)
-                        MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = label,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = desc,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MetricsPanel(state: TrackingUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            MetricItem(
-                label = "Distancia",
-                value = FormatUtils.formatDistance(state.metrics.totalDistanceMeters)
-            )
-            MetricItem(
-                label = "Velocidad",
-                value = FormatUtils.formatSpeed(state.metrics.currentSpeedMs)
-            )
-            MetricItem(
-                label = "Tiempo",
-                value = FormatUtils.formatDuration(state.metrics.elapsedTimeMs)
-            )
-        }
-    }
-}
-
-@Composable
 private fun MetricItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = label,
-            fontSize = 11.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
         )
         Text(
-            text = value,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

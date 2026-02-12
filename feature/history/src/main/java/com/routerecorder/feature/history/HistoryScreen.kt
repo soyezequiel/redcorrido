@@ -15,10 +15,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DirectionsBike
+
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.DirectionsWalk
+
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material3.Card
@@ -123,8 +125,8 @@ private fun RouteCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = when (route.activityType) {
-                            ActivityType.WALK -> Icons.Default.DirectionsWalk
-                            ActivityType.BIKE -> Icons.Default.DirectionsBike
+                            ActivityType.WALK -> Icons.AutoMirrored.Filled.DirectionsWalk
+                            ActivityType.BIKE -> Icons.AutoMirrored.Filled.DirectionsBike
                             ActivityType.CAR -> Icons.Default.DirectionsCar
                         },
                         contentDescription = null,

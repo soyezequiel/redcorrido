@@ -33,13 +33,17 @@ dependencies {
     implementation(project(":core:domain"))
     implementation(project(":core:common"))
 
+    implementation(project(":service:video-render"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
