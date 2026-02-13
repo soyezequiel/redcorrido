@@ -1,6 +1,6 @@
 package com.routerecorder.feature.tracking
 
-import androidx.compose.animation.animateColorAsState
+import android.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
@@ -30,15 +30,27 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.routerecorder.core.common.util.FormatUtils
 import com.routerecorder.core.domain.model.ActivityType
 import com.routerecorder.core.domain.model.TrackingState
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,30 +137,68 @@ fun TrackingScreen(
             }
         }
 
-        // Map placeholder
+        // OSMDroid Map
+        val context = LocalContext.current
+        val mapView = remember {
+            Configuration.getInstance().userAgentValue = context.packageName
+            MapView(context).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+                controller.setZoom(16.0)
+                // Default to Buenos Aires
+                controller.setCenter(GeoPoint(-34.6037, -58.3816))
+            }
+        }
+
+        // Add "my location" overlay
+        val locationOverlay = remember {
+            MyLocationNewOverlay(GpsMyLocationProvider(context), mapView).apply {
+                enableMyLocation()
+                enableFollowLocation()
+                mapView.overlays.add(this)
+            }
+        }
+
+        // Route polyline overlay
+        val routePolyline = remember {
+            Polyline(mapView).apply {
+                outlinePaint.color = Color.parseColor("#2196F3")
+                outlinePaint.strokeWidth = 10f
+                mapView.overlays.add(this)
+            }
+        }
+
+        // Update polyline when trackPoints change
+        val trackPoints = uiState.trackPoints
+        if (trackPoints.isNotEmpty()) {
+            val geoPoints = trackPoints.map { GeoPoint(it.latitude, it.longitude) }
+            routePolyline.setPoints(geoPoints)
+            mapView.controller.animateTo(geoPoints.last())
+            mapView.invalidate()
+        }
+
+        DisposableEffect(Unit) {
+            mapView.onResume()
+            onDispose {
+                locationOverlay.disableMyLocation()
+                locationOverlay.disableFollowLocation()
+                mapView.onPause()
+                mapView.onDetach()
+            }
+        }
+
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
-            Column(
+            AndroidView(
+                factory = { mapView },
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "🗺️ Mapa",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Text(
-                    text = "${uiState.trackPoints.size} puntos registrados",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+                    .clip(RoundedCornerShape(12.dp))
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
